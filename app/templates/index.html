@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Records – Voice Enabled</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🏥 Local Patient Records</h1>
+      <div class="header-meta">
+        <span id="llm-badge">LLM: {{ llm_model }}</span>
+        <span id="voice-status" class="badge">Voice: Ready</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- Left: Patient list & search -->
+      <aside class="sidebar">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search patients..." />
+          <button id="btn-search">Search</button>
+        </div>
+        <button id="btn-new-patient" class="primary">+ New Patient</button>
+        <ul id="patient-list"></ul>
+      </aside>
+
+      <!-- Center: Patient detail / forms -->
+      <section class="content">
+        <div id="welcome" class="panel">
+          <h2>Welcome</h2>
+          <p>Select a patient or create a new one. You can control the entire system by voice.</p>
+          <p><strong>Voice commands examples:</strong></p>
+          <ul>
+            <li>"Create a new patient named John Doe, date of birth 1980-05-15, male"</li>
+            <li>"Show summary for current patient"</li>
+            <li>"Add allergy penicillin, reaction rash, severity moderate"</li>
+            <li>"What are the latest labs?"</li>
+            <li>"Upload a report" (then use the file picker)</li>
+          </ul>
+          <p>Click the microphone or say <em>"Hey Assistant"</em> (browser dependent).</p>
+        </div>
+
+        <div id="patient-panel" class="panel hidden">
+          <div class="patient-header">
+            <h2 id="patient-name">—</h2>
+            <span id="patient-mrn" class="muted"></span>
+            <div class="actions">
+              <button id="btn-summary" class="primary">AI Summary</button>
+              <button id="btn-edit-patient">Edit</button>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="overview">Overview</button>
+            <button class="tab" data-tab="vitals">Vitals</button>
+            <button class="tab" data-tab="labs">Labs</button>
+            <button class="tab" data-tab="meds">Meds & Allergies</button>
+            <button class="tab" data-tab="docs">Documents</button>
+            <button class="tab" data-tab="history">History</button>
+          </div>
+
+          <div id="tab-overview" class="tab-content">
+            <div class="grid-2">
+              <div>
+                <h3>Demographics</h3>
+                <div id="demo-info"></div>
+              </div>
+              <div>
+                <h3>Active Conditions</h3>
+                <ul id="conditions-list"></ul>
+                <h3>Allergies</h3>
+                <ul id="allergies-list"></ul>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-vitals" class="tab-content hidden">
+            <h3>Recent Vitals</h3>
+            <div id="vitals-table"></div>
+            <button id="btn-add-vitals">+ Add Vitals</button>
+          </div>
+
+          <div id="tab-labs" class="tab-content hidden">
+            <h3>Lab Results</h3>
+            <div id="labs-table"></div>
+            <button id="btn-add-lab">+ Add Lab</button>
+          </div>
+
+          <div id="tab-meds" class="tab-content hidden">
+            <h3>Medications</h3>
+            <ul id="meds-list"></ul>
+            <button id="btn-add-med">+ Add Medication</button>
+            <h3>Allergies</h3>
+            <ul id="allergies-list-2"></ul>
+            <button id="btn-add-allergy">+ Add Allergy</button>
+          </div>
+
+          <div id="tab-docs" class="tab-content hidden">
+            <h3>Uploaded Documents</h3>
+            <ul id="docs-list"></ul>
+            <div class="upload-area">
+              <input type="file" id="pdf-upload" accept=".pdf" />
+              <button id="btn-upload-pdf" class="primary">Upload PDF Report</button>
+              <p class="muted">PDF text is extracted and structured into the record via AI.</p>
+            </div>
+          </div>
+
+          <div id="tab-history" class="tab-content hidden">
+            <h3>Communication & Audit History</h3>
+            <div id="comm-history"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: AI Chat / Voice -->
+      <aside class="chat-panel">
+        <h3>AI Assistant</h3>
+        <div id="chat-messages"></div>
+        <div class="chat-input-row">
+		  <button id="btn-mic" title="Hold or click to speak" class="mic">🎤</button>
+		  <button id="btn-stop-voice" title="Stop AI voice" class="stop-voice">🔇</button>
+		  <input type="text" id="chat-input" placeholder="Type or speak..." />
+		  <button id="btn-send">Send</button>
+		</div>
+        <p class="muted small">All conversations are stored. Voice uses browser Web Speech API (local).</p>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modals (simple) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="modal-title">Form</h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-save" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
