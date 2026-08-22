@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, Dict, Any
 
 from app.database import get_db
@@ -13,6 +13,22 @@ from app.services.llm import answer_with_context
 from app.services.audit import log_change, audit_model_update
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def _parse_date(value):
+    """Convert string YYYY-MM-DD (or date/datetime) to Python date, or return None."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        try:
+            return datetime.strptime(value[:10], "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    return None
 
 
 def _execute_action(db: Session, patient_id: int, action: Dict[str, Any]) -> str:
@@ -55,6 +71,9 @@ def _execute_action(db: Session, patient_id: int, action: Dict[str, Any]) -> str
             allergen=allergen,
             reaction=action.get("reaction"),
             severity=action.get("severity"),
+            start_date=_parse_date(action.get("start_date")),
+            end_date=_parse_date(action.get("end_date")),
+            status=action.get("status", "active"),
             source="voice/ai",
         )
         db.add(allergy)
@@ -74,7 +93,12 @@ def _execute_action(db: Session, patient_id: int, action: Dict[str, Any]) -> str
             dosage=action.get("dosage"),
             frequency=action.get("frequency"),
             route=action.get("route"),
+            start_date=_parse_date(action.get("start_date")),
+            end_date=_parse_date(action.get("end_date")),
             status=action.get("status", "active"),
+            prescribed_by=action.get("prescribed_by"),
+            indication=action.get("indication"),
+            notes=action.get("notes"),
             source="voice/ai",
         )
         db.add(med)
@@ -83,6 +107,53 @@ def _execute_action(db: Session, patient_id: int, action: Dict[str, Any]) -> str
         log_change(db, "medications", med.id, "create", changed_by="voice/ai")
         db.commit()
         return f"Added medication: {name}"
+
+    elif act == "update_medication":
+        # Find medication by name (prefer most recent)
+        med_name = action.get("medication_name") or action.get("name")
+        med_id = action.get("medication_id") or action.get("id")
+        if not med_name and not med_id:
+            return "Medication name or id is required to update."
+
+        q = db.query(models.Medication).filter(models.Medication.patient_id == patient_id)
+        if med_id:
+            med = q.filter(models.Medication.id == med_id).first()
+        else:
+            med = (
+                q.filter(models.Medication.name.ilike(med_name))
+                .order_by(models.Medication.recorded_at.desc())
+                .first()
+            )
+        if not med:
+            return f"No medication named '{med_name or med_id}' found for this patient."
+
+        # All updatable fields
+        update_data = {}
+        string_fields = ["name", "dosage", "frequency", "route", "status",
+                         "prescribed_by", "indication", "notes"]
+        for f in string_fields:
+            if f in action and action[f] is not None:
+                update_data[f] = action[f]
+
+        if "start_date" in action:
+            update_data["start_date"] = _parse_date(action.get("start_date"))
+        if "end_date" in action:
+            update_data["end_date"] = _parse_date(action.get("end_date"))
+
+        if not update_data:
+            return "No fields provided to update."
+
+        # If marking inactive and no end_date given, default to today
+        if update_data.get("status") == "inactive" and "end_date" not in update_data:
+            update_data["end_date"] = date.today()
+
+        audit_model_update(db, "medications", med.id, med, update_data, changed_by="voice/ai")
+        for k, v in update_data.items():
+            setattr(med, k, v)
+        db.commit()
+        db.refresh(med)
+        changed = ", ".join(f"{k}={v}" for k, v in update_data.items())
+        return f"Updated medication {med.name}: {changed}"
 
     elif act == "add_condition":
         name = action.get("name")
@@ -93,6 +164,8 @@ def _execute_action(db: Session, patient_id: int, action: Dict[str, Any]) -> str
             name=name,
             icd_code=action.get("icd_code"),
             status=action.get("status", "active"),
+            start_date=_parse_date(action.get("start_date")),
+            end_date=_parse_date(action.get("end_date")),
             source="voice/ai",
         )
         db.add(cond)
@@ -173,7 +246,7 @@ def chat(payload: schemas.ChatRequest, db: Session = Depends(get_db)):
                 # Plain text only — no emoji (prevents LLM commenting on checkmarks)
                 reply = f"Done. {action_status}"
             except Exception as e:
-                reply = f"⚠️ Could not apply change: {str(e)}"
+                reply = f"Could not apply change: {str(e)}"
     except Exception as e:
         reply = f"Sorry, I could not reach the language model. Error: {str(e)}"
 

@@ -54,9 +54,9 @@ def extract_structured_from_text(text: str, patient_context: str = "") -> Dict[s
 Return ONLY valid JSON with the following top-level keys (use empty lists/objects if nothing found):
 {
   "demographics": {"first_name": null, "last_name": null, "date_of_birth": null, "gender": null, "mrn": null, ...},
-  "allergies": [{"allergen": "", "reaction": "", "severity": ""}],
-  "medications": [{"name": "", "dosage": "", "frequency": "", "route": "", "status": "active"}],
-  "conditions": [{"name": "", "icd_code": null, "status": "active", "onset_date": null}],
+  "allergies": [{"allergen": "", "reaction": "", "severity": "", "start_date": null, "end_date": null, "status": "active"}],
+  "medications": [{"name": "", "dosage": "", "frequency": "", "route": "", "start_date": null, "end_date": null, "status": "active"}],
+  "conditions": [{"name": "", "icd_code": null, "status": "active", "start_date": null, "end_date": null}],
   "vitals": [{"temperature_c": null, "heart_rate": null, "bp_systolic": null, "bp_diastolic": null, "spo2": null, "weight_kg": null, "height_cm": null, "recorded_at": null}],
   "lab_results": [{"test_name": "", "value": "", "unit": "", "reference_range": "", "flag": null, "category": "", "resulted_at": null}],
   "encounters": [{"encounter_type": "", "date": null, "provider": "", "chief_complaint": "", "assessment": "", "plan": ""}],
@@ -109,9 +109,6 @@ def answer_with_context(
     """
     Answer a user question. If the user wants to change data, return a structured action.
     Returns: (reply_text, action_dict or None)
-    action_dict example:
-      {"action": "update_patient", "fields": {"blood_type": "O+"}}
-      {"action": "add_allergy", "allergen": "Penicillin", "reaction": "rash", "severity": "moderate"}
     """
     system = f"""You are a helpful medical AI assistant embedded in a local patient records system.
 You can both answer questions AND update the patient record when the user asks you to change something.
@@ -139,20 +136,31 @@ Only include the fields that should be changed.
 
 B) Add allergy:
 ```action
-{{"action": "add_allergy", "allergen": "NSAID", "reaction": "vomiting", "severity": "moderate"}}
+{{"action": "add_allergy", "allergen": "NSAID", "reaction": "vomiting", "severity": "moderate", "start_date": "2024-01-15", "status": "active"}}
 ```
 
 C) Add medication:
 ```action
-{{"action": "add_medication", "name": "Metformin", "dosage": "500mg", "frequency": "twice daily", "route": "oral"}}
+{{"action": "add_medication", "name": "Metformin", "dosage": "500mg", "frequency": "twice daily", "route": "oral", "start_date": "2024-03-01", "status": "active"}}
 ```
 
-D) Add condition:
+D) Update medication (ANY field can be changed):
 ```action
-{{"action": "add_condition", "name": "Type 2 Diabetes", "status": "active"}}
+{{"action": "update_medication", "medication_name": "Metformin", "status": "inactive", "end_date": "2026-08-22"}}
+```
+You can update any of these fields: name, dosage, frequency, route, start_date, end_date, status, prescribed_by, indication, notes.
+Match by medication_name (case-insensitive). If multiple match, the most recent one is updated.
+Examples:
+- Mark inactive: {{"action": "update_medication", "medication_name": "Metformin", "status": "inactive", "end_date": "2026-08-22"}}
+- Change dose: {{"action": "update_medication", "medication_name": "Metformin", "dosage": "1000mg", "frequency": "once daily"}}
+- Change multiple: {{"action": "update_medication", "medication_name": "Atorvastatin", "dosage": "20mg", "status": "active", "start_date": "2026-01-01"}}
+
+E) Add condition:
+```action
+{{"action": "add_condition", "name": "Type 2 Diabetes", "status": "active", "start_date": "2023-06-01"}}
 ```
 
-E) Add vitals:
+F) Add vitals:
 ```action
 {{"action": "add_vitals", "bp_systolic": 120, "bp_diastolic": 80, "heart_rate": 72, "temperature_c": 36.6, "spo2": 98, "weight_kg": 77, "height_cm": 172}}
 ```

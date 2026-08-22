@@ -79,8 +79,9 @@ class Allergy(Base):
     allergen = Column(String(200), nullable=False)
     reaction = Column(String(500))
     severity = Column(String(50))  # mild, moderate, severe, life-threatening
-    onset_date = Column(Date)
-    status = Column(String(20), default="active")  # active, resolved
+    start_date = Column(Date)
+    end_date = Column(Date)
+    status = Column(String(20), default="active")  # active, inactive
     notes = Column(Text)
     recorded_at = Column(DateTime, default=datetime.utcnow)
     source = Column(String(100))  # e.g. "user", "pdf_report", "ai"
@@ -99,7 +100,7 @@ class Medication(Base):
     route = Column(String(50))  # oral, IV, topical, etc.
     start_date = Column(Date)
     end_date = Column(Date)
-    status = Column(String(20), default="active")  # active, discontinued, completed
+    status = Column(String(20), default="active")  # active, inactive
     prescribed_by = Column(String(200))
     indication = Column(String(300))
     notes = Column(Text)
@@ -116,9 +117,9 @@ class Condition(Base):
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     name = Column(String(300), nullable=False)
     icd_code = Column(String(20))
-    status = Column(String(20), default="active")  # active, resolved, chronic
-    onset_date = Column(Date)
-    resolved_date = Column(Date)
+    status = Column(String(20), default="active")  # active, inactive
+    start_date = Column(Date)
+    end_date = Column(Date)
     severity = Column(String(50))
     notes = Column(Text)
     recorded_at = Column(DateTime, default=datetime.utcnow)

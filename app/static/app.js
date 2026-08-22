@@ -132,16 +132,24 @@ function renderPatient(p) {
     el.innerHTML = items.length ? items.map(fmt).join("") : "<li class='muted'>None recorded</li>";
   };
   renderList($("#conditions-list"), p.conditions || [], (c) =>
-    `<li><strong>${c.name}</strong> ${c.icd_code ? "(" + c.icd_code + ")" : ""} – ${c.status}</li>`
+    `<li><strong>${c.name}</strong> ${c.icd_code ? "(" + c.icd_code + ")" : ""}
+     <span class="muted">[${c.status || "active"}]
+     ${c.start_date ? " from " + c.start_date : ""}${c.end_date ? " to " + c.end_date : ""}</span></li>`
   );
   renderList($("#allergies-list"), p.allergies || [], (a) =>
-    `<li><strong>${a.allergen}</strong> – ${a.reaction || ""} (${a.severity || "?"})</li>`
+    `<li><strong>${a.allergen}</strong> – ${a.reaction || ""} (${a.severity || "?"})
+     <span class="muted">[${a.status || "active"}]
+     ${a.start_date ? " from " + a.start_date : ""}${a.end_date ? " to " + a.end_date : ""}</span></li>`
   );
   renderList($("#allergies-list-2"), p.allergies || [], (a) =>
-    `<li><strong>${a.allergen}</strong> – ${a.reaction || ""} (${a.severity || "?"})</li>`
+    `<li><strong>${a.allergen}</strong> – ${a.reaction || ""} (${a.severity || "?"})
+     <span class="muted">[${a.status || "active"}]
+     ${a.start_date ? " from " + a.start_date : ""}${a.end_date ? " to " + a.end_date : ""}</span></li>`
   );
   renderList($("#meds-list"), p.medications || [], (m) =>
-    `<li><strong>${m.name}</strong> ${m.dosage || ""} ${m.frequency || ""} – ${m.status}</li>`
+    `<li><strong>${m.name}</strong> ${m.dosage || ""} ${m.frequency || ""}
+     <span class="muted">[${m.status || "active"}]
+     ${m.start_date ? " from " + m.start_date : ""}${m.end_date ? " to " + m.end_date : ""}</span></li>`
   );
 
   // Vitals table
@@ -461,6 +469,9 @@ $("#btn-add-med").onclick = () => {
       { name: "dosage", label: "Dosage" },
       { name: "frequency", label: "Frequency" },
       { name: "route", label: "Route" },
+      { name: "start_date", label: "Start date", type: "date" },
+      { name: "end_date", label: "End date", type: "date" },
+      { name: "status", label: "Status (active/inactive)", value: "active" },
     ],
     async (data) => {
       await api(`/patients/${currentPatientId}/medications`, { method: "POST", body: JSON.stringify(data) });
@@ -477,6 +488,9 @@ $("#btn-add-allergy").onclick = () => {
       { name: "allergen", label: "Allergen *", required: true },
       { name: "reaction", label: "Reaction" },
       { name: "severity", label: "Severity (mild/moderate/severe)" },
+      { name: "start_date", label: "Start date", type: "date" },
+      { name: "end_date", label: "End date", type: "date" },
+      { name: "status", label: "Status (active/inactive)", value: "active" },
     ],
     async (data) => {
       await api(`/patients/${currentPatientId}/allergies`, { method: "POST", body: JSON.stringify(data) });

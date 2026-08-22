@@ -87,7 +87,8 @@ class AllergyBase(BaseModel):
     allergen: str
     reaction: Optional[str] = None
     severity: Optional[str] = None
-    onset_date: Optional[date] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     status: Optional[str] = "active"
     notes: Optional[str] = None
     source: Optional[str] = "user"
@@ -101,7 +102,8 @@ class AllergyUpdate(BaseModel):
     allergen: Optional[str] = None
     reaction: Optional[str] = None
     severity: Optional[str] = None
-    onset_date: Optional[date] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -157,8 +159,8 @@ class ConditionBase(BaseModel):
     name: str
     icd_code: Optional[str] = None
     status: Optional[str] = "active"
-    onset_date: Optional[date] = None
-    resolved_date: Optional[date] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     severity: Optional[str] = None
     notes: Optional[str] = None
     source: Optional[str] = "user"
@@ -172,8 +174,8 @@ class ConditionUpdate(BaseModel):
     name: Optional[str] = None
     icd_code: Optional[str] = None
     status: Optional[str] = None
-    onset_date: Optional[date] = None
-    resolved_date: Optional[date] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     severity: Optional[str] = None
     notes: Optional[str] = None
 

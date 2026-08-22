@@ -20,6 +20,8 @@ def build_patient_dict(db: Session, patient_id: int) -> Dict[str, Any]:
             "allergen": a.allergen,
             "reaction": a.reaction,
             "severity": a.severity,
+            "start_date": str(a.start_date) if a.start_date else None,
+            "end_date": str(a.end_date) if a.end_date else None,
             "status": a.status,
         }
         for a in patient.allergies
@@ -30,6 +32,8 @@ def build_patient_dict(db: Session, patient_id: int) -> Dict[str, Any]:
             "dosage": m.dosage,
             "frequency": m.frequency,
             "route": m.route,
+            "start_date": str(m.start_date) if m.start_date else None,
+            "end_date": str(m.end_date) if m.end_date else None,
             "status": m.status,
             "indication": m.indication,
         }
@@ -40,7 +44,8 @@ def build_patient_dict(db: Session, patient_id: int) -> Dict[str, Any]:
             "name": c.name,
             "icd_code": c.icd_code,
             "status": c.status,
-            "onset_date": str(c.onset_date) if c.onset_date else None,
+            "start_date": str(c.start_date) if c.start_date else None,
+            "end_date": str(c.end_date) if c.end_date else None,
         }
         for c in patient.conditions
     ]
