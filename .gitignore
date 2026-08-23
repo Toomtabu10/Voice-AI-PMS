@@ -1,2 +1,17 @@
 .env
 *.env
+
+# runtime data — never commit patient data or local DB state
+data/
+uploads/
+*.db
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# stray local test files
+*.zip
