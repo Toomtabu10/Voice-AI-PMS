@@ -234,6 +234,14 @@ def get_document(doc_id: int, db: Session = Depends(get_db)):
 def download_document(doc_id: int, inline: bool = False, db: Session = Depends(get_db)):
     """Download or inline-view the original PDF.
     Use ?inline=1 for iframe preview; default is attachment download.
+
+    Explicitly disables caching: doc_id is a reused, autoincrementing
+    integer, and this filesystem's uploaded file behind a given id can
+    change across a fresh DB/uploads reset (e.g. after a wipe-and-restart,
+    the new first upload becomes doc_id=1 again, reusing the exact same
+    URL an old, deleted doc_id=1 used). Without no-store, browsers can
+    silently serve a stale cached response for that URL instead of the
+    current file on disk.
     """
     from fastapi.responses import FileResponse
     doc = db.query(models.Document).filter(models.Document.id == doc_id).first()
@@ -244,16 +252,24 @@ def download_document(doc_id: int, inline: bool = False, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="File not found on disk")
     filename = doc.original_filename or doc.filename
     media = doc.mime_type or "application/pdf"
+    no_cache_headers = {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+    }
     if inline:
         return FileResponse(
             path=str(path),
             media_type=media,
-            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+                **no_cache_headers,
+            },
         )
     return FileResponse(
         path=str(path),
         filename=filename,
         media_type=media,
+        headers=no_cache_headers,
     )
 
 
