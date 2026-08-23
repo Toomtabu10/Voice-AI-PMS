@@ -233,6 +233,7 @@ class LabResultBase(BaseModel):
     source: Optional[str] = "user"
     category: Optional[str] = None
     encounter_id: Optional[int] = None
+    document_id: Optional[int] = None
 
 
 class LabResultCreate(LabResultBase):
@@ -242,6 +243,8 @@ class LabResultCreate(LabResultBase):
 class LabResultOut(LabResultBase):
     id: int
     patient_id: int
+    document_id: Optional[int] = None
+    original_filename: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

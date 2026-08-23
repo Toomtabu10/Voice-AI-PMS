@@ -68,6 +68,11 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
         .limit(20)
         .all()
     )
+    for lab in detail.recent_labs:
+        if getattr(lab, "document_id", None):
+            doc = db.query(models.Document).filter(models.Document.id == lab.document_id).first()
+            if doc:
+                lab.original_filename = doc.original_filename or doc.filename
     detail.encounters = (
         db.query(models.Encounter)
         .filter(models.Encounter.patient_id == patient_id)

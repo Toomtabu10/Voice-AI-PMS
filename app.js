@@ -169,42 +169,24 @@ function renderPatient(p) {
   // Labs
   const labs = p.recent_labs || [];
   $("#labs-table").innerHTML = labs.length
-    ? `<table><thead><tr><th>Test</th><th>Value</th><th>Flag</th><th>Date</th><th>Source</th></tr></thead>
-       <tbody>${labs.map((l, idx) => `
-         <tr>
-           <td>${l.test_name}</td>
-           <td>${l.value || l.numeric_value || "—"} ${l.unit || ""}</td>
-           <td>${l.flag || ""}</td>
-           <td>${(l.resulted_at || "").slice(0, 10)}</td>
-           <td>${l.document_id
-             ? `<button type="button" onclick="togglePdfPreview('lab-${l.id}')" style="font-size:0.8rem;padding:0.2rem 0.5rem;">📄 ${l.original_filename || "View PDF"}</button>`
-             : (l.source || "—")}</td>
-         </tr>
-         ${l.document_id ? `<tr id="lab-pdf-row-${l.id}"><td colspan="5" style="padding:0;border:none;">
-           <div id="pdf-preview-lab-${l.id}" class="pdf-preview"
-                data-src="/api/documents/${l.document_id}/download?inline=1"
-                style="max-height:0;overflow:hidden;transition:max-height 0.35s ease;">
-           </div>
-         </td></tr>` : ""}
-       `).join("")}</tbody></table>`
+    ? `<table><thead><tr><th>Test</th><th>Value</th><th>Flag</th><th>Date</th></tr></thead>
+       <tbody>${labs.map((l) => `<tr>
+         <td>${l.test_name}</td>
+         <td>${l.value || l.numeric_value || "—"} ${l.unit || ""}</td>
+         <td>${l.flag || ""}</td>
+         <td>${(l.resulted_at || "").slice(0, 10)}</td>
+       </tr>`).join("")}</tbody></table>`
     : "<p class='muted'>No labs recorded</p>";
 
   // Documents
   const docs = p.documents || [];
   $("#docs-list").innerHTML = docs.length
-    ? docs.map((d) => {
-        const statusColor = d.processing_status === "failed" ? "#f87171"
-          : d.processing_status === "processed" ? "#4ade80" : "#94a3b8";
-        const failNote = (d.processing_status === "failed" && d.notes)
-          ? `<div style="color:#f87171;font-size:0.8rem;margin-top:0.35rem;max-width:100%;word-break:break-word;">⚠️ ${d.notes}</div>`
-          : "";
-        return `
+    ? docs.map((d) => `
         <li style="padding:0.6rem 0;border-bottom:1px solid #334155;">
           <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
             <span style="flex:1;min-width:180px;">
               ${d.original_filename || d.filename}
-              <span class="muted"> – <span style="color:${statusColor}">${d.processing_status}</span> (${(d.uploaded_at||"").slice(0,16)})</span>
-              ${failNote}
+              <span class="muted"> – ${d.processing_status} (${(d.uploaded_at||"").slice(0,16)})</span>
             </span>
             <button type="button" onclick="togglePdfPreview(${d.id})" style="font-size:0.8rem;padding:0.25rem 0.6rem;">
               📄 View PDF
@@ -218,9 +200,9 @@ function renderPatient(p) {
           <div id="pdf-preview-${d.id}" class="pdf-preview"
                data-src="/api/documents/${d.id}/download?inline=1"
                style="margin-top:0;max-height:0;overflow:hidden;transition:max-height 0.35s ease, margin-top 0.35s ease;">
+            <!-- iframe injected only when opened – avoids auto-download on page load -->
           </div>
-        </li>`;
-      }).join("")
+        </li>`).join("")
     : "<li class='muted'>No documents</li>";
 }
 

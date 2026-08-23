@@ -16,7 +16,7 @@ from app.services.patient_context import build_patient_context_text
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-def _apply_structured_data(db: Session, patient_id: int, structured: dict, source: str = "pdf_report", document_id: int | None = None):
+def _apply_structured_data(db: Session, patient_id: int, structured: dict, source: str = "pdf_report"):
     """Apply extracted structured data into the database tables."""
     # Demographics updates (only if missing)
     dem = structured.get("demographics") or {}
@@ -94,17 +94,6 @@ def _apply_structured_data(db: Session, patient_id: int, structured: dict, sourc
     for lab in structured.get("lab_results") or []:
         if not lab.get("test_name"):
             continue
-        # Skip if same test_name already exists for this patient (case-insensitive)
-        exists = (
-            db.query(models.LabResult)
-            .filter(
-                models.LabResult.patient_id == patient_id,
-                models.LabResult.test_name.ilike(lab["test_name"]),
-            )
-            .first()
-        )
-        if exists:
-            continue
         numeric = None
         try:
             if lab.get("value") is not None:
@@ -114,7 +103,6 @@ def _apply_structured_data(db: Session, patient_id: int, structured: dict, sourc
         db.add(
             models.LabResult(
                 patient_id=patient_id,
-                document_id=document_id,
                 test_name=lab["test_name"],
                 value=str(lab.get("value")) if lab.get("value") is not None else None,
                 numeric_value=numeric,
@@ -199,7 +187,7 @@ async def upload_document(
         doc.extracted_text = raw_text
         doc.structured_data = structured
         doc.processing_status = "processed"
-        _apply_structured_data(db, patient_id, structured, source="pdf_report", document_id=doc.id)
+        _apply_structured_data(db, patient_id, structured, source="pdf_report")
         log_change(db, "documents", doc.id, "create", changed_by="user", reason="PDF upload + extraction")
         db.commit()
     except Exception as e:
@@ -232,8 +220,8 @@ def get_document(doc_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{doc_id}/download")
 def download_document(doc_id: int, inline: bool = False, db: Session = Depends(get_db)):
-    """Download or inline-view the original PDF.
-    Use ?inline=1 for iframe preview; default is attachment download.
+    """Download or inline-view the original PDF file.
+    Use ?inline=1 for browser preview (iframe); default is attachment download.
     """
     from fastapi.responses import FileResponse
     doc = db.query(models.Document).filter(models.Document.id == doc_id).first()
@@ -245,10 +233,13 @@ def download_document(doc_id: int, inline: bool = False, db: Session = Depends(g
     filename = doc.original_filename or doc.filename
     media = doc.mime_type or "application/pdf"
     if inline:
+        # Inline so <iframe> can display without triggering a Save dialog
         return FileResponse(
             path=str(path),
             media_type=media,
-            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+            },
         )
     return FileResponse(
         path=str(path),

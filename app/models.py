@@ -159,6 +159,7 @@ class LabResult(Base):
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     encounter_id = Column(Integer, ForeignKey("encounters.id"), nullable=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
     test_name = Column(String(200), nullable=False)
     test_code = Column(String(50))  # LOINC if available
     value = Column(String(100))  # store as string for flexibility (can be numeric or qualitative)
@@ -175,6 +176,7 @@ class LabResult(Base):
 
     patient = relationship("Patient", back_populates="lab_results")
     encounter = relationship("Encounter", back_populates="lab_results")
+    document = relationship("Document")
 
 
 class Encounter(Base):
