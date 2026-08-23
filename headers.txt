@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+date: Sun, 23 Aug 2026 05:44:10 GMT
+server: uvicorn
+content-disposition: inline; filename="blood_report_high_thyroid.pdf"
+cache-control: no-store, no-cache, must-revalidate, max-age=0
+pragma: no-cache
+content-type: application/pdf
+accept-ranges: bytes
+content-length: 3598
+last-modified: Sun, 23 Aug 2026 05:34:00 GMT
+etag: "72bcb8734570ae4481d4200dc130846a"
+

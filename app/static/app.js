@@ -118,6 +118,9 @@ async function selectPatient(id) {
 function renderPatient(p) {
   $("#patient-name").textContent = `${p.first_name} ${p.last_name}`;
   $("#patient-mrn").textContent = `MRN: ${p.mrn} · DOB: ${p.date_of_birth} · ${p.gender || ""}`;
+  // Clear any previously generated summary — it belongs to whichever
+  // patient was selected before and must not carry over.
+  $("#summary-body").innerHTML = "<p class='muted'>Click \"Generate / Refresh\" to create a summary from the full patient record.</p>";
 
   $("#demo-info").innerHTML = `
     <p>Phone: ${p.phone_primary || "—"}</p>
@@ -346,16 +349,120 @@ async function loadChatHistory(patientId) {
   }
 }
 
+// ---------- Markdown rendering (headers, bold/italic, lists, GFM tables) ----------
+function escapeHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function renderInline(text) {
+  text = escapeHtml(text);
+  // Restore explicit <br> line breaks the model may emit inside table cells /
+  // paragraphs (e.g. "Name: X <br>MRN: Y <br>DOB: Z"). Only this exact,
+  // known-safe self-closing tag is un-escaped — everything else stays escaped.
+  text = text.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>");
+  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+  return text;
+}
+
+function isTableDivider(line) {
+  return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line || "");
+}
+
+function splitTableRow(line) {
+  const cells = line.split("|").map((c) => c.trim());
+  if (cells.length && cells[0] === "") cells.shift();
+  if (cells.length && cells[cells.length - 1] === "") cells.pop();
+  return cells;
+}
+
+function renderMarkdown(md) {
+  if (!md || !md.trim()) return "<p class='muted'>No summary available.</p>";
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  let html = "";
+  let inList = null; // 'ul' | 'ol'
+  let i = 0;
+
+  function closeList() {
+    if (inList) { html += `</${inList}>`; inList = null; }
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (!line.trim()) { closeList(); i++; continue; }
+
+    if (/^-{3,}$/.test(line.trim())) { closeList(); html += "<hr/>"; i++; continue; }
+
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    if (heading) {
+      closeList();
+      const level = Math.min(heading[1].length + 1, 6); // # -> h2 .. #### -> h5
+      html += `<h${level}>${renderInline(heading[2])}</h${level}>`;
+      i++; continue;
+    }
+
+    if (line.includes("|") && isTableDivider(lines[i + 1])) {
+      closeList();
+      const headerCells = splitTableRow(line);
+      html += "<table><thead><tr>" + headerCells.map((c) => `<th>${renderInline(c)}</th>`).join("") + "</tr></thead><tbody>";
+      i += 2;
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim()) {
+        const cells = splitTableRow(lines[i]);
+        html += "<tr>" + cells.map((c) => `<td>${renderInline(c)}</td>`).join("") + "</tr>";
+        i++;
+      }
+      html += "</tbody></table>";
+      continue;
+    }
+
+    const ul = line.match(/^\s*[-*]\s+(.*)$/);
+    if (ul) {
+      if (inList !== "ul") { closeList(); html += "<ul>"; inList = "ul"; }
+      html += `<li>${renderInline(ul[1])}</li>`;
+      i++; continue;
+    }
+
+    const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (ol) {
+      if (inList !== "ol") { closeList(); html += "<ol>"; inList = "ol"; }
+      html += `<li>${renderInline(ol[1])}</li>`;
+      i++; continue;
+    }
+
+    closeList();
+    const para = [line];
+    i++;
+    while (
+      i < lines.length && lines[i].trim() &&
+      !/^(#{1,4})\s+/.test(lines[i]) &&
+      !/^\s*[-*]\s+/.test(lines[i]) &&
+      !/^\s*\d+\.\s+/.test(lines[i]) &&
+      !lines[i].includes("|")
+    ) {
+      para.push(lines[i]);
+      i++;
+    }
+    html += `<p>${renderInline(para.join(" "))}</p>`;
+  }
+  closeList();
+  return html;
+}
+
 // ---------- Summary ----------
 async function requestSummary() {
   if (!currentPatientId) return;
-  addChatMessage("user", "Generate a full patient summary");
+  const body = $("#summary-body");
+  body.innerHTML = "<p class='muted'>Generating summary…</p>";
   try {
     const res = await api(`/patients/${currentPatientId}/summary`);
-    addChatMessage("assistant", res.summary);
-    speak(res.summary.slice(0, 600) + (res.summary.length > 600 ? " …" : ""));
+    body.innerHTML = renderMarkdown(res.summary);
   } catch (e) {
-    addChatMessage("assistant", "Error generating summary: " + e.message);
+    body.innerHTML = `<p class="muted">Error generating summary: ${escapeHtml(e.message)}</p>`;
   }
 }
 

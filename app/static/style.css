@@ -185,6 +185,19 @@ th { color: var(--muted); font-weight: 500; }
 .modal-content label { display: block; margin: 0.6rem 0 0.2rem; font-size: 0.85rem; color: var(--muted); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
 
+.summary-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.summary-header-row h3 { margin-bottom: 0; }
+
+.summary-body { line-height: 1.55; }
+.summary-body h2, .summary-body h3, .summary-body h4 { margin: 1.1rem 0 0.5rem; color: var(--text); }
+.summary-body h2:first-child, .summary-body h3:first-child { margin-top: 0; }
+.summary-body p { margin: 0.5rem 0; color: var(--text); }
+.summary-body ul, .summary-body ol { margin: 0.4rem 0 0.8rem 1.4rem; }
+.summary-body li { margin: 0.2rem 0; }
+.summary-body table { margin: 0.6rem 0 1rem; }
+.summary-body code { background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; }
+.summary-body hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
 @media (max-width: 1000px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar, .chat-panel { display: none; }

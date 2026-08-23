@@ -48,7 +48,6 @@
             <h2 id="patient-name">—</h2>
             <span id="patient-mrn" class="muted"></span>
             <div class="actions">
-              <button id="btn-summary" class="primary">AI Summary</button>
               <button id="btn-edit-patient">Edit</button>
             </div>
           </div>
@@ -60,6 +59,7 @@
             <button class="tab" data-tab="meds">Meds & Allergies</button>
             <button class="tab" data-tab="docs">Documents</button>
             <button class="tab" data-tab="history">History</button>
+            <button class="tab" data-tab="summary">AI Summary</button>
           </div>
 
           <div id="tab-overview" class="tab-content">
@@ -111,6 +111,16 @@
           <div id="tab-history" class="tab-content hidden">
             <h3>Communication & Audit History</h3>
             <div id="comm-history"></div>
+          </div>
+
+          <div id="tab-summary" class="tab-content hidden">
+            <div class="summary-header-row">
+              <h3>AI Patient Summary</h3>
+              <button id="btn-summary" class="primary">Generate / Refresh</button>
+            </div>
+            <div id="summary-body" class="summary-body">
+              <p class="muted">Click "Generate / Refresh" to create a summary from the full patient record.</p>
+            </div>
           </div>
         </div>
       </section>
