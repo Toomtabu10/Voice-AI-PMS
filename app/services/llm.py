@@ -25,6 +25,41 @@ def _ensure_env_keys():
         os.environ["OLLAMA_API_BASE"] = settings.OLLAMA_API_BASE
 
 
+def _recover_from_tool_use_error(error_text: str) -> Optional[str]:
+    """Some Groq-hosted models (notably the openai/gpt-oss-* family) are
+    natively trained with a "Harmony" tool-calling format and can emit a
+    native tool call on their own initiative -- even though this app never
+    declares any `tools` in the request. Groq then rejects the response
+    server-side with a tool_use_failed error (tool_choice defaults to
+    "none" when no tools were registered, and the model ignored that).
+
+    The model's actual intended reply is still present in the error body
+    as `failed_generation`, shaped like {"name": "action", "arguments": {...}}
+    -- "arguments" is exactly the JSON payload our own prompt asks the model
+    to put inside a ```action fenced block. Recover it and reformat it as
+    that same fenced block, so answer_with_context's existing parser
+    handles it completely unchanged. Returns None if nothing recoverable
+    is found (e.g. a genuinely different error), so callers can fall back
+    to raising/surfacing the original error untouched.
+    """
+    if "tool_use_failed" not in error_text and "failed_generation" not in error_text:
+        return None
+    match = re.search(r'"failed_generation"\s*:\s*"((?:[^"\\]|\\.)*)"', error_text)
+    if not match:
+        return None
+    try:
+        # The captured group is itself a JSON-escaped string; un-escape it
+        # by re-parsing it as a JSON string literal, then parse THAT as JSON.
+        inner = json.loads('"' + match.group(1) + '"')
+        payload = json.loads(inner)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    arguments = payload.get("arguments")
+    if not isinstance(arguments, dict):
+        return None
+    return "I'll make that change.\n\n```action\n" + json.dumps(arguments) + "\n```"
+
+
 def chat(
     messages: List[Dict[str, str]],
     temperature: float = 0.3,
@@ -42,8 +77,14 @@ def chat(
     if response_format:
         kwargs["response_format"] = response_format
 
-    response = completion(**kwargs)
-    return response.choices[0].message.content
+    try:
+        response = completion(**kwargs)
+        return response.choices[0].message.content
+    except Exception as e:
+        recovered = _recover_from_tool_use_error(str(e))
+        if recovered is not None:
+            return recovered
+        raise
 
 
 def extract_structured_from_text(text: str, patient_context: str = "") -> Dict[str, Any]:
