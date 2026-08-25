@@ -149,11 +149,20 @@ function renderPatient(p) {
      <span class="muted">[${a.status || "active"}]
      ${a.start_date ? " from " + a.start_date : ""}${a.end_date ? " to " + a.end_date : ""}</span></li>`
   );
+  // Medications with Edit button
   renderList($("#meds-list"), p.medications || [], (m) =>
-    `<li><strong>${m.name}</strong> ${m.dosage || ""} ${m.frequency || ""}
-     <span class="muted">[${m.status || "active"}]
-     ${m.start_date ? " from " + m.start_date : ""}${m.end_date ? " to " + m.end_date : ""}</span></li>`
+    `<li>
+       <strong>${m.name}</strong> ${m.dosage || ""} ${m.frequency || ""}
+       <span class="muted">[${m.status || "active"}]
+       ${m.start_date ? " from " + m.start_date : ""}${m.end_date ? " to " + m.end_date : ""}</span>
+       <button type="button" class="btn-edit-med" data-id="${m.id}"
+               style="font-size:0.75rem;margin-left:0.5rem;padding:0.15rem 0.4rem;">Edit</button>
+     </li>`
   );
+  // Wire Edit buttons for medications
+  $$("#meds-list .btn-edit-med").forEach((btn) => {
+    btn.onclick = () => editMedicationForm(+btn.dataset.id);
+  });
 
   // Vitals table
   const vitals = p.recent_vitals || [];
@@ -572,6 +581,36 @@ async function editPatientForm() {
       await loadPatients();
       selectPatient(currentPatientId);
       speak("Patient updated.");
+    }
+  );
+}
+
+async function editMedicationForm(medId) {
+  if (!currentPatientId) return;
+  const p = await api(`/patients/${currentPatientId}`);
+  const m = (p.medications || []).find((x) => x.id === medId);
+  if (!m) {
+    alert("Medication not found");
+    return;
+  }
+  showModal(
+    "Edit Medication",
+    [
+      { name: "name", label: "Name *", value: m.name || "", required: true },
+      { name: "dosage", label: "Dosage", value: m.dosage || "" },
+      { name: "frequency", label: "Frequency", value: m.frequency || "" },
+      { name: "route", label: "Route", value: m.route || "" },
+      { name: "start_date", label: "Start date", type: "date", value: m.start_date || "" },
+      { name: "end_date", label: "End date", type: "date", value: m.end_date || "" },
+      { name: "status", label: "Status (active/inactive)", value: m.status || "active" },
+    ],
+    async (data) => {
+      await api(`/medications/${medId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+      selectPatient(currentPatientId);
+      speak("Medication updated.");
     }
   );
 }
