@@ -605,7 +605,7 @@ async function editMedicationForm(medId) {
       { name: "status", label: "Status (active/inactive)", value: m.status || "active" },
     ],
     async (data) => {
-      await api(`/medications/${medId}`, {
+      await api(`/patients/medications/${medId}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       });
